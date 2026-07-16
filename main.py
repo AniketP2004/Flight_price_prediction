@@ -2,10 +2,14 @@ import joblib
 import xgboost
 import pandas as pd
 import json
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from pydantic import BaseModel
 
 app = FastAPI()
+app.mount("/static", StaticFiles(directory="static", html=True), name="static")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 stops_mapping = {"zero": 0, "one": 1, "two_or_more": 2}
 class_mapping = {"Business": 1, "Economy": 0}

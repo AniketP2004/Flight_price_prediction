@@ -11,13 +11,11 @@ from xgboost import XGBRegressor
 
 df = pd.read_csv('Clean_Dataset.csv')
 
-print(df.columns)
 #  Data preprocessing
 df = df.drop('Unnamed: 0', axis=1)
 df = df.drop('flight', axis=1)
 df['class'] = df['class'].apply(lambda x: 1 if x == 'Business' else 0)
 df.stops=  df.stops.map({"zero":0,"one":1,"two_or_more":2})
-
 
 df = df.join(pd.get_dummies(df.airline, prefix='airline', dtype=int)).drop('airline', axis=1)
 df = df.join(pd.get_dummies(df.source_city, prefix='source', dtype=int)).drop('source_city', axis=1)
@@ -62,7 +60,7 @@ XGboost= {
 
 # Save function 
 def save_model_metrics(name, model, y_test, y_pred ):
-    joblib.dump(model, f"C:/Users/project/Desktop/flightprediction/Model_metrics/{name}.pkl")
+    joblib.dump(model, f"Model_metrics/{name}.pkl")
 
     metrics = {
         'R2 score': r2_score(y_test, y_pred),
@@ -71,7 +69,7 @@ def save_model_metrics(name, model, y_test, y_pred ):
     }
     print(f"{name} -> {metrics}")
 
-    with open(f"C:/Users/project/Desktop/flightprediction/Model_metrics/{name}.json", 'w') as f:
+    with open(f"Model_metrics/{name}.json", 'w') as f:
         json.dump(metrics, f, indent=4)
 
 
@@ -81,7 +79,7 @@ def cross_validation(name, model, X, y, cv=5):
 
 
 print("Training ML models")
-print(df.stops.unique())
+
 lr = LinearRegression()
 cross_validation('Linear Regression', lr, X_train, y_train)
 lr.fit(X_train, y_train)

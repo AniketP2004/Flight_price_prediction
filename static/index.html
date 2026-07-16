@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FARECAST — Flight Price Prediction</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg:#0b0f14;
+    --panel:#141a21;
+    --panel2:#1a2129;
+    --line:#2a3138;
+    --line2:#3a434c;
+    --cream:#e8e4d8;
+    --cream-dim:#8b8f8a;
+    --amber:#ff8a00;
+    --amber-dim:#6b3f10;
+    --green-ok:#4ade80;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; background:var(--bg); color:var(--cream);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'Space Mono',monospace;}
+
+  /* ---------- Header board ---------- */
+  header{
+    padding:56px 24px 40px;
+    max-width:920px; margin:0 auto;
+    text-align:center;
+  }
+  .eyebrow{
+    font-family:'Space Mono',monospace; font-size:12px; letter-spacing:.25em;
+    color:var(--cream-dim); text-transform:uppercase; margin-bottom:18px;
+  }
+  h1{
+    font-size:clamp(32px,5vw,52px); font-weight:700; margin:0 0 10px;
+    letter-spacing:-.01em;
+  }
+  h1 span{color:var(--amber);}
+  .sub{color:var(--cream-dim); font-size:15px; max-width:520px; margin:0 auto; line-height:1.6;}
+
+  /* ---------- Split-flap board ---------- */
+  .board{
+    max-width:920px; margin:0 auto 56px; padding:0 24px;
+  }
+  .board-frame{
+    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    padding:20px 24px; display:flex; flex-wrap:wrap; gap:0;
+    justify-content:space-between; align-items:center;
+  }
+  .board-row{display:flex; align-items:baseline; gap:14px; flex:1 1 240px;}
+  .board-label{font-family:'Space Mono',monospace; font-size:11px; color:var(--cream-dim); letter-spacing:.15em; text-transform:uppercase; width:70px;}
+  .flap-group{display:flex; gap:4px;}
+  .flap{
+    background:#000; border-radius:3px; padding:6px 4px; min-width:24px;
+    text-align:center; font-family:'Space Mono',monospace; font-weight:700;
+    font-size:20px; color:var(--amber); border:1px solid #000;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06), inset 0 -1px 0 rgba(0,0,0,.6);
+    transition: color .15s;
+  }
+  .flap.dim{color:var(--line2);}
+  .board-status{
+    font-family:'Space Mono',monospace; font-size:11px; color:var(--green-ok);
+    display:flex; align-items:center; gap:8px; padding-top:14px; width:100%;
+    border-top:1px dashed var(--line); margin-top:14px;
+  }
+  .dot{width:6px; height:6px; border-radius:50%; background:var(--green-ok); box-shadow:0 0 8px var(--green-ok);}
+  .dot.off{background:#8b3a3a; box-shadow:0 0 8px #8b3a3a;}
+
+  /* ---------- Counter (form) ---------- */
+  main{max-width:920px; margin:0 auto; padding:0 24px 100px;}
+  .counter{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:32px;
+  }
+  .counter-head{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-bottom:24px; padding-bottom:18px; border-bottom:1px solid var(--line);
+  }
+  .counter-head h2{font-size:16px; margin:0; letter-spacing:.02em;}
+  .counter-head .tag{font-family:'Space Mono',monospace; font-size:11px; color:var(--amber); border:1px solid var(--amber-dim); padding:3px 9px; border-radius:20px;}
+
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:18px 20px;}
+  .grid.full{grid-template-columns:1fr;}
+  @media(max-width:640px){ .grid{grid-template-columns:1fr;} }
+
+  .field label{
+    display:block; font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--cream-dim); margin-bottom:7px; font-family:'Space Mono',monospace;
+  }
+  .field select, .field input{
+    width:100%; background:var(--bg); border:1px solid var(--line2); color:var(--cream);
+    padding:11px 12px; border-radius:6px; font-size:14px; font-family:'Inter',sans-serif;
+    appearance:none; -webkit-appearance:none;
+  }
+  .field select:focus, .field input:focus{
+    outline:2px solid var(--amber); outline-offset:1px; border-color:var(--amber);
+  }
+  .field.select-wrap{position:relative;}
+  .field.select-wrap::after{
+    content:"▾"; position:absolute; right:14px; top:38px; color:var(--cream-dim); pointer-events:none; font-size:12px;
+  }
+
+  .model-picker{margin-top:26px;}
+  .model-picker label{font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.1em; color:var(--cream-dim); text-transform:uppercase; margin-bottom:10px; display:block;}
+  .model-options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px;}
+  @media(max-width:640px){ .model-options{grid-template-columns:repeat(2,1fr);} }
+  .model-opt{
+    border:1px solid var(--line2); border-radius:8px; padding:12px 10px; cursor:pointer;
+    text-align:center; transition:.15s; background:var(--bg);
+  }
+  .model-opt:hover{border-color:var(--amber-dim);}
+  .model-opt.active{border-color:var(--amber); background:rgba(255,138,0,.08);}
+  .model-opt .name{font-size:12.5px; font-weight:600;}
+  .model-opt .r2{font-family:'Space Mono',monospace; font-size:11px; color:var(--cream-dim); margin-top:3px;}
+  .model-opt.active .r2{color:var(--amber);}
+
+  .submit-row{margin-top:28px; display:flex; align-items:center; gap:16px;}
+  button.go{
+    background:var(--amber); color:#181008; border:none; font-weight:700; font-size:14px;
+    padding:14px 28px; border-radius:7px; cursor:pointer; font-family:'Inter',sans-serif;
+    letter-spacing:.02em; transition:.15s;
+  }
+  button.go:hover{background:#ffa338;}
+  button.go:disabled{background:var(--line2); color:var(--cream-dim); cursor:not-allowed;}
+  .error-msg{color:#ff6b6b; font-size:13px; font-family:'Space Mono',monospace;}
+
+  /* ---------- Boarding pass result ---------- */
+  .pass-wrap{margin-top:36px; display:none;}
+  .pass-wrap.show{display:block; animation:rise .35s ease;}
+  @keyframes rise{ from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+
+  .pass{
+    display:flex; background:var(--cream); color:#181c1f; border-radius:10px; overflow:hidden;
+    box-shadow:0 20px 50px rgba(0,0,0,.4);
+  }
+  .pass-main{flex:1; padding:26px 28px; position:relative;}
+  .pass-stub{
+    width:150px; background:#d8d3c2; padding:26px 18px; position:relative;
+    display:flex; flex-direction:column; justify-content:space-between;
+    border-left:2px dashed #a8a290;
+  }
+  .pass-stub::before, .pass-stub::after{
+    content:""; position:absolute; left:-9px; width:18px; height:18px; background:var(--bg);
+    border-radius:50%;
+  }
+  .pass-stub::before{top:-9px;}
+  .pass-stub::after{bottom:-9px;}
+
+  .pass-eyebrow{font-family:'Space Mono',monospace; font-size:10px; letter-spacing:.15em; color:#7a7d6f; text-transform:uppercase;}
+  .pass-route{display:flex; align-items:center; gap:14px; margin:10px 0 20px;}
+  .pass-city{font-size:22px; font-weight:700; font-family:'Space Mono',monospace;}
+  .pass-arrow{color:#a8a290; font-size:18px;}
+  .pass-meta{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:20px;}
+  .pass-meta div span{display:block;}
+  .pass-meta .k{font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:#7a7d6f; margin-bottom:4px; font-family:'Space Mono',monospace;}
+  .pass-meta .v{font-size:13.5px; font-weight:600;}
+
+  .price-block{border-top:1px dashed #a8a290; padding-top:16px; display:flex; align-items:baseline; justify-content:space-between;}
+  .price-label{font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#7a7d6f; font-family:'Space Mono',monospace;}
+  .price-val{font-family:'Space Mono',monospace; font-size:34px; font-weight:700; color:#c2650a;}
+
+  .pass-stub .k{font-family:'Space Mono',monospace; font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:#7a7d6f;}
+  .pass-stub .v{font-size:13px; font-weight:700; margin-top:3px;}
+  .barcode{height:40px; background:repeating-linear-gradient(90deg,#181c1f 0 2px, transparent 2px 5px);}
+
+  footer{
+    text-align:center; padding:30px 24px 50px; color:var(--cream-dim); font-size:12px;
+    font-family:'Space Mono',monospace;
+  }
+  footer a{color:var(--amber); text-decoration:none;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Fare Intelligence Terminal</div>
+  <h1>Know the price<br>before you <span>board</span>.</h1>
+  <p class="sub">Four regression models, one route. Enter your flight details and compare what each model thinks your ticket is worth.</p>
+</header>
+
+<div class="board">
+  <div class="board-frame">
+    <div class="board-row">
+      <span class="board-label">status</span>
+      <div class="flap-group" id="apiFlaps">
+        <span class="flap dim">·</span><span class="flap dim">·</span><span class="flap dim">·</span>
+      </div>
+    </div>
+    <div class="board-row">
+      <span class="board-label">models</span>
+      <div class="flap-group" id="modelCountFlaps">
+        <span class="flap dim">0</span><span class="flap dim">0</span>
+      </div>
+    </div>
+    <div class="board-status" id="boardStatus">
+      <span class="dot off" id="statusDot"></span>
+      <span id="statusText">connecting to prediction engine…</span>
+    </div>
+  </div>
+</div>
+
+<main>
+  <div class="counter">
+    <div class="counter-head">
+      <h2>Flight details</h2>
+      <span class="tag">check-in counter</span>
+    </div>
+
+    <form id="flightForm">
+      <div class="grid">
+        <div class="field select-wrap">
+          <label for="airline">Airline</label>
+          <select id="airline" required>
+            <option value="Indigo">Indigo</option>
+            <option value="Air_India">Air India</option>
+            <option value="GO_FIRST">GO FIRST</option>
+            <option value="SpiceJet">SpiceJet</option>
+            <option value="AirAsia">AirAsia</option>
+            <option value="Vistara">Vistara</option>
+          </select>
+        </div>
+        <div class="field select-wrap">
+          <label for="class_type">Class</label>
+          <select id="class_type" required>
+            <option value="Economy">Economy</option>
+            <option value="Business">Business</option>
+          </select>
+        </div>
+
+        <div class="field select-wrap">
+          <label for="source_city">From</label>
+          <select id="source_city" required>
+            <option value="Delhi">Delhi</option>
+            <option value="Mumbai">Mumbai</option>
+            <option value="Bangalore">Bangalore</option>
+            <option value="Kolkata">Kolkata</option>
+            <option value="Hyderabad">Hyderabad</option>
+            <option value="Chennai">Chennai</option>
+          </select>
+        </div>
+        <div class="field select-wrap">
+          <label for="destination_city">To</label>
+          <select id="destination_city" required>
+            <option value="Mumbai">Mumbai</option>
+            <option value="Delhi">Delhi</option>
+            <option value="Bangalore">Bangalore</option>
+            <option value="Kolkata">Kolkata</option>
+            <option value="Hyderabad">Hyderabad</option>
+            <option value="Chennai">Chennai</option>
+          </select>
+        </div>
+
+        <div class="field select-wrap">
+          <label for="departure_time">Departure</label>
+          <select id="departure_time" required>
+            <option value="Morning">Morning</option>
+            <option value="Early_Morning">Early morning</option>
+            <option value="Afternoon">Afternoon</option>
+            <option value="Evening">Evening</option>
+            <option value="Night">Night</option>
+            <option value="Late_Night">Late night</option>
+          </select>
+        </div>
+        <div class="field select-wrap">
+          <label for="arrival_time">Arrival</label>
+          <select id="arrival_time" required>
+            <option value="Evening">Evening</option>
+            <option value="Morning">Morning</option>
+            <option value="Early_Morning">Early morning</option>
+            <option value="Afternoon">Afternoon</option>
+            <option value="Night">Night</option>
+            <option value="Late_Night">Late night</option>
+          </select>
+        </div>
+
+        <div class="field select-wrap">
+          <label for="stops">Stops</label>
+          <select id="stops" required>
+            <option value="zero">Non-stop</option>
+            <option value="one">1 stop</option>
+            <option value="two_or_more">2+ stops</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="duration">Duration (hrs)</label>
+          <input type="number" id="duration" step="0.1" min="0" value="2.5" required>
+        </div>
+
+        <div class="field">
+          <label for="days_left">Days until departure</label>
+          <input type="number" id="days_left" min="0" value="15" required>
+        </div>
+      </div>
+
+      <div class="model-picker">
+        <label>Choose a model</label>
+        <div class="model-options" id="modelOptions">
+          <!-- populated by JS -->
+        </div>
+      </div>
+
+      <div class="submit-row">
+        <button type="submit" class="go" id="goBtn">Get fare estimate</button>
+        <span class="error-msg" id="errorMsg"></span>
+      </div>
+    </form>
+
+    <div class="pass-wrap" id="passWrap">
+      <div class="pass">
+        <div class="pass-main">
+          <div class="pass-eyebrow">Fare estimate — boarding pass</div>
+          <div class="pass-route">
+            <span class="pass-city" id="passFrom">DEL</span>
+            <span class="pass-arrow">✈ →</span>
+            <span class="pass-city" id="passTo">BOM</span>
+          </div>
+          <div class="pass-meta">
+            <div><span class="k">Class</span><span class="v" id="passClass">—</span></div>
+            <div><span class="k">Stops</span><span class="v" id="passStops">—</span></div>
+            <div><span class="k">Days left</span><span class="v" id="passDays">—</span></div>
+          </div>
+          <div class="price-block">
+            <span class="price-label">Predicted fare</span>
+            <span class="price-val" id="passPrice">₹0</span>
+          </div>
+        </div>
+        <div class="pass-stub">
+          <div>
+            <div class="k">Model</div>
+            <div class="v" id="passModel">—</div>
+            <div class="k" style="margin-top:12px;">Accuracy (R²)</div>
+            <div class="v" id="passR2">—</div>
+          </div>
+          <div class="barcode"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  FARECAST · built on FastAPI + scikit-learn/xgboost · <a href="https://github.com/AniketP2004/Flight_price_prediction" target="_blank">source</a>
+</footer>
+
+<script>
+  const API_BASE = "";
+
+  let selectedModel = null;
+  let modelMetrics = {};
+
+  const modelOptionsEl = document.getElementById('modelOptions');
+  const apiFlaps = document.getElementById('apiFlaps');
+  const modelCountFlaps = document.getElementById('modelCountFlaps');
+  const statusDot = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
+  const errorMsg = document.getElementById('errorMsg');
+  const goBtn = document.getElementById('goBtn');
+  const passWrap = document.getElementById('passWrap');
+
+  function setFlaps(el, text){
+    el.innerHTML = '';
+    text.split('').forEach(ch=>{
+      const f = document.createElement('span');
+      f.className = 'flap';
+      f.textContent = ch;
+      el.appendChild(f);
+    });
+  }
+
+  async function init(){
+    try{
+      const healthRes = await fetch(API_BASE + '/');
+      if(!healthRes.ok) throw new Error('bad health');
+      setFlaps(apiFlaps, 'ON');
+      statusDot.classList.remove('off');
+      statusText.textContent = 'prediction engine online';
+
+      const modelsRes = await fetch(API_BASE + '/models');
+      const modelsData = await modelsRes.json();
+      const names = modelsData.available_models || modelsData.avialable_models || [];
+      setFlaps(modelCountFlaps, String(names.length).padStart(2,'0'));
+
+      // try to fetch R2 per model via a lightweight predict-less approach:
+      // since there's no dedicated metrics endpoint, we just render names now
+      // and fill R2 after first prediction, or show a placeholder.
+      renderModelOptions(names);
+    }catch(err){
+      setFlaps(apiFlaps, 'OFF');
+      statusText.textContent = 'cannot reach API at ' + API_BASE + ' — start your uvicorn server';
+      renderModelOptions(["Linear Regression","Random Forest","Decision Tree","Xgboost"]);
+    }
+  }
+
+  function renderModelOptions(names){
+    modelOptionsEl.innerHTML = '';
+    names.forEach((name, i)=>{
+      const opt = document.createElement('div');
+      opt.className = 'model-opt' + (i===0 ? ' active' : '');
+      opt.dataset.name = name;
+      opt.innerHTML = `<div class="name">${name}</div><div class="r2">${modelMetrics[name] ? 'R² ' + modelMetrics[name] : '—'}</div>`;
+      opt.addEventListener('click', ()=>{
+        document.querySelectorAll('.model-opt').forEach(o=>o.classList.remove('active'));
+        opt.classList.add('active');
+        selectedModel = name;
+      });
+      modelOptionsEl.appendChild(opt);
+    });
+    selectedModel = names[0] || null;
+  }
+
+  document.getElementById('flightForm').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    errorMsg.textContent = '';
+    if(!selectedModel){ errorMsg.textContent = 'pick a model first'; return; }
+
+    const payload = {
+      airline: document.getElementById('airline').value,
+      source_city: document.getElementById('source_city').value,
+      destination_city: document.getElementById('destination_city').value,
+      stops: document.getElementById('stops').value,
+      class_type: document.getElementById('class_type').value,
+      duration: parseFloat(document.getElementById('duration').value),
+      days_left: parseInt(document.getElementById('days_left').value),
+      departure_time: document.getElementById('departure_time').value,
+      arrival_time: document.getElementById('arrival_time').value,
+      model_name: selectedModel
+    };
+
+    goBtn.disabled = true;
+    goBtn.textContent = 'Calculating…';
+
+    try{
+      const res = await fetch(API_BASE + '/predict', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      if(!res.ok) throw new Error('request failed: ' + res.status);
+      const data = await res.json();
+
+      modelMetrics[data.model_used] = data.model_r2.toFixed(3);
+      document.querySelectorAll('.model-opt').forEach(o=>{
+        if(o.dataset.name === data.model_used){
+          o.querySelector('.r2').textContent = 'R² ' + data.model_r2.toFixed(3);
+        }
+      });
+
+      document.getElementById('passFrom').textContent = payload.source_city.slice(0,3).toUpperCase();
+      document.getElementById('passTo').textContent = payload.destination_city.slice(0,3).toUpperCase();
+      document.getElementById('passClass').textContent = payload.class_type;
+      document.getElementById('passStops').textContent = payload.stops.replace('_',' ');
+      document.getElementById('passDays').textContent = payload.days_left + ' days';
+      document.getElementById('passModel').textContent = data.model_used;
+      document.getElementById('passR2').textContent = data.model_r2.toFixed(3);
+      document.getElementById('passPrice').textContent = '₹' + data.predicted_price.toLocaleString('en-IN');
+
+      passWrap.classList.add('show');
+    }catch(err){
+      errorMsg.textContent = 'error: ' + err.message;
+    }finally{
+      goBtn.disabled = false;
+      goBtn.textContent = 'Get fare estimate';
+    }
+  });
+
+  init();
+</script>
+
+</body>
+</html>
